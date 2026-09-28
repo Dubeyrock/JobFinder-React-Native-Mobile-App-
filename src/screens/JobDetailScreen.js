@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -8,6 +8,7 @@ import {
   Linking,
   Image,
   StatusBar,
+  Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
@@ -20,9 +21,23 @@ export default function JobDetailScreen({ route, navigation }) {
   const { isBookmarked, toggleBookmark } = useBookmarks();
   const bookmarked = isBookmarked(job.id);
 
-  const handleApply = () => {
-    if (job.url) {
-      Linking.openURL(job.url);
+  // FIX 1: logo load fail ho to letter fallback dikhao
+  const [logoFailed, setLogoFailed] = useState(false);
+
+  // FIX 2: Apply button web + mobile dono par chalega
+  const handleApply = async () => {
+    const url = job.url;
+    console.log('Apply URL:', url);
+    if (!url) return;
+
+    if (Platform.OS === 'web') {
+      window.open(url, '_blank', 'noopener,noreferrer');
+    } else {
+      try {
+        await Linking.openURL(url);
+      } catch (e) {
+        console.log('Link open nahi hua', e);
+      }
     }
   };
 
@@ -63,11 +78,13 @@ export default function JobDetailScreen({ route, navigation }) {
         {/* Company Info Card */}
         <View style={[styles.companyCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
           <View style={styles.companyRow}>
-            {job.company_logo ? (
+            {/* FIX 3: onError se fallback */}
+            {job.company_logo && !logoFailed ? (
               <Image
                 source={{ uri: job.company_logo }}
                 style={[styles.companyLogo, { backgroundColor: colors.surfaceElevated }]}
                 resizeMode="contain"
+                onError={() => setLogoFailed(true)}
               />
             ) : (
               <View style={[styles.logoFallback, { backgroundColor: colors.chipBg }]}>
